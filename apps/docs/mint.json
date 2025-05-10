@@ -43,9 +43,9 @@
       "url": "https://git.new/memory"
     },
     {
-      "name": "Community",
-      "icon": "discord",
-      "url": "https://discord.gg/supermemory"
+      "name": "Ask the founder",
+      "icon": "mail",
+      "url": "mailto:dhravya@supermemory.com"
     },
     {
       "name": "X (Twitter)",
@@ -55,12 +55,12 @@
   ],
   "navigation": [
     {
-      "group": "Get Started",
+      "group": "Get Started (5 mins)",
       "pages": ["introduction", "quickstart", "self-hosting"]
     },
     {
       "group": "Essentials",
-      "pages": ["essentials/distinguishing-users", "essentials/architecture", "essentials/pricing"]
+      "pages": ["essentials/metadata-filtering", "essentials/pricing"]
     },
     {
       "group": "Changelog",

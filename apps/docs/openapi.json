@@ -1,336 +1,78 @@
 {
-  "openapi": "3.0.0",
+  "openapi": "3.1.0",
   "info": {
     "title": "Supermemory API",
-    "version": "1.0", 
-    "description": "API for Supermemory personal knowledge management system"
+    "description": "best memory api on 🌍",
+    "version": "2.0.0"
   },
   "servers": [
     {
-      "url": "https://api.supermemory.ai/v1",
-      "description": "Supermemory Production API"
+      "url": "https://v2.api.supermemory.ai",
+      "description": "Production Server"
     }
   ],
-  "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer"
-      }
-    },
-    "schemas": {
-      "User": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "uuid": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          },
-          "firstName": {
-            "type": "string"
-          },
-          "lastName": {
-            "type": "string"
-          },
-          "profilePictureUrl": {
-            "type": "string"
-          },
-          "hasOnboarded": {
-            "type": "boolean"
-          }
-        }
-      },
-      "Space": {
-        "type": "object",
-        "properties": {
-          "uuid": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "ownerId": {
-            "type": "string"
-          },
-          "isPublic": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "permissions": {
-            "type": "object",
-            "properties": {
-              "canRead": {
-                "type": "boolean"
-              },
-              "canEdit": {
-                "type": "boolean"
-              },
-              "isOwner": {
-                "type": "boolean"
-              }
-            }
-          }
-        }
-      },
-      "Document": {
-        "type": "object",
-        "properties": {
-          "uuid": {
-            "type": "string"
-          },
-          "content": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string"
-          },
-          "url": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      }
-    }
-  },
   "paths": {
-    "/user": {
-      "get": {
-        "summary": "Get current user",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "User details",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/User"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/spaces": {
-      "get": {
-        "summary": "List spaces",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of spaces",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "spaces": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Space"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/spaces/create": {
-      "post": {
-        "summary": "Create space",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+    "/settings": {
+      "put": {
+        "responses": {},
+        "operationId": "putSettings",
+        "parameters": [],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "spaceName": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 100
-                  },
-                  "isPublic": {
+                  "shouldLLMFilter": {
                     "type": "boolean"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Space created"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/spaces/addContent": {
-      "post": {
-        "summary": "Add content to space",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "spaceId": {
-                    "type": "string"
                   },
-                  "documentId": {
-                    "type": "string"
-                  }
-                },
-                "required": ["spaceId", "documentId"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Content added to space successfully"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/memories": {
-      "get": {
-        "summary": "List memories",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "start",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 0
-            }
-          },
-          {
-            "name": "count",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 10
-            }
-          },
-          {
-            "name": "spaceId",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of memories",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "items": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Document"
-                      }
-                    },
-                    "total": {
-                      "type": "integer"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/chat": {
-      "post": {
-        "summary": "Chat with memory assistant",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "messages": {
+                  "categories": {
                     "type": "array",
                     "items": {
-                      "type": "object"
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 50
                     }
                   },
-                  "threadId": {
-                    "type": "string"
+                  "filterPrompt": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 750
+                  },
+                  "includeItems": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 20
+                    }
+                  },
+                  "excludeItems": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 20
+                    }
+                  },
+                  "filterTags": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "tag": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 50
+                        },
+                        "score": {
+                          "type": "number",
+                          "minimum": 0
+                        }
+                      },
+                      "required": ["tag", "score"]
+                    }
                   }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Chat response stream",
-            "content": {
-              "text/event-stream": {
-                "schema": {
-                  "type": "string"
                 }
               }
             }
@@ -338,163 +80,546 @@
         }
       }
     },
-    "/v1/add": {
+    "/add": {
       "post": {
-        "summary": "Add new content",
-        "security": [
-          {
-            "bearerAuth": []
+        "responses": {
+          "200": {
+            "description": "Memory added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["id", "status"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
           }
-        ],
+        },
+        "operationId": "postAdd",
+        "tags": ["Memory Management"],
+        "parameters": [],
+        "description": "Add a new memory with content and metadata",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
                   "content": {
-                    "type": "string",
-                    "minLength": 1
+                    "type": "string"
                   },
-                  "spaces": {
+                  "metadata": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "boolean"
+                        }
+                      ]
+                    }
+                  },
+                  "spaceIds": {
                     "type": "array",
-                    "maxItems": 5,
                     "items": {
                       "type": "string"
                     }
                   },
-                  "prefetched": {
-                    "type": "object",
-                    "properties": {
-                      "contentToVectorize": {
-                        "type": "string"
-                      },
-                      "contentToSave": {
-                        "type": "string"
-                      },
-                      "title": {
-                        "type": "string"
-                      },
-                      "type": {
-                        "type": "string"
-                      },
-                      "description": {
-                        "type": "string"
-                      },
-                      "ogImage": {
-                        "type": "string"
-                      }
-                    }
+                  "summarizeMemories": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "id": {
+                    "type": "string"
                   }
+                },
+                "required": ["content"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/update/{id}": {
+      "put": {
+        "responses": {
+          "200": {
+            "description": "Memory updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["id", "status"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Memory not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Content added successfully"
-          },
-          "400": {
-            "description": "Invalid request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/search": {
-      "post": {
-        "summary": "Search content",
-        "security": [
+        "operationId": "putUpdateById",
+        "tags": ["Memory Management"],
+        "parameters": [
           {
-            "bearerAuth": []
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
           }
         ],
+        "description": "Update an existing memory",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "query": {
-                    "type": "string",
-                    "minLength": 1
+                  "content": {
+                    "type": "string"
                   },
-                  "limit": {
-                    "type": "number",
-                    "minimum": 1,
-                    "maximum": 50,
-                    "default": 10
+                  "metadata": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "boolean"
+                        }
+                      ]
+                    }
                   },
-                  "threshold": {
-                    "type": "number",
-                    "minimum": 0,
-                    "maximum": 1,
-                    "default": 0
+                  "spaceIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "summarizeMemories": {
+                    "type": "boolean",
+                    "default": false
                   }
+                },
+                "required": ["content"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delete/{id}": {
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Memory deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Memory not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Search results"
-          }
-        }
-      }
-    },
-    "/user/spaces": {
-      "get": {
-        "summary": "Get user spaces",
-        "security": [
+        "operationId": "deleteDeleteById",
+        "tags": ["Memory Management"],
+        "parameters": [
           {
-            "bearerAuth": []
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
           }
         ],
-        "responses": {
-          "200": {
-            "description": "List of user spaces"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
+        "description": "Delete a memory"
       }
     },
-    "/integrations/notion/import": {
-      "get": {
-        "summary": "Import Notion content",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+    "/search": {
+      "post": {
         "responses": {
           "200": {
-            "description": "Stream of import progress",
+            "description": "Search results",
             "content": {
-              "text/event-stream": {
+              "application/json": {
                 "schema": {
-                  "type": "string"
+                  "type": "object",
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "documentId": {
+                            "type": "string"
+                          },
+                          "chunks": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "content": {
+                                  "type": "string"
+                                },
+                                "isRelevant": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": ["content", "isRelevant"]
+                            }
+                          },
+                          "score": {
+                            "type": "number"
+                          },
+                          "documentSummary": {
+                            "type": "string"
+                          },
+                          "metadata": {
+                            "type": "object",
+                            "additionalProperties": {}
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "documentId",
+                          "chunks",
+                          "score",
+                          "documentSummary",
+                          "metadata",
+                          "title",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": ["results"]
                 }
               }
             }
           },
-          "401": {
-            "description": "Unauthorized"
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postSearch",
+        "tags": ["Search"],
+        "parameters": [],
+        "description": "Search through documents with metadata filtering",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "q": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "default": 10
+                  },
+                  "filters": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "OR": {
+                            "type": "array",
+                            "items": {}
+                          },
+                          "AND": {
+                            "type": "array",
+                            "items": {}
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    ]
+                  },
+                  "categoriesFilter": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["q"]
+              }
+            }
           }
         }
       }
+    },
+    "/fastsearch": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Fast search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "content": {
+                            "type": "string"
+                          },
+                          "similarity": {
+                            "type": "number"
+                          }
+                        },
+                        "required": ["id", "content", "similarity"]
+                      }
+                    }
+                  },
+                  "required": ["results"]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getFastsearch",
+        "tags": ["Search"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "required": false
+          }
+        ],
+        "description": "Fast, lossy search using quantized embeddings"
+      }
+    },
+    "/connect/{app}": {
+      "get": {
+        "responses": {},
+        "operationId": "getConnectByApp",
+        "tags": ["Connect"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "app",
+            "schema": {
+              "type": "string",
+              "enum": ["notion"]
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "redirectUrl",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ]
+      }
+    },
+    "/connections/{connectionId}": {
+      "get": {
+        "responses": {},
+        "operationId": "getConnectionsByConnectionId",
+        "tags": ["Connect"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connectionId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ]
+      }
     }
   },
-  "security": [
-    {
-      "bearerAuth": []
-    }
-  ]
+  "components": {
+    "schemas": {}
+  }
 }

@@ -38,8 +38,9 @@ import {
 } from "@supermemory/db";
 import { typeDecider } from "../utils/typeDecider";
 import { isErr, Ok } from "../errors/results";
+import { fromHono } from "chanfana";
 
-const actions = new Hono<{ Variables: Variables; Bindings: Env }>()
+const actions = fromHono(new Hono<{ Variables: Variables; Bindings: Env }>())
   .post(
     "/chat",
     zValidator(
@@ -130,10 +131,6 @@ const actions = new Hono<{ Variables: Variables; Bindings: Env }>()
 
         // Pre-compute the vector similarity expression
         const vectorSimilarity = sql<number>`1 - (embeddings <=> ${JSON.stringify(embedding[0])}::vector)`;
-        const textSearchRank = sql<number>`ts_rank_cd(
-          to_tsvector('english', coalesce(${chunk.textContent}, '')),
-          plainto_tsquery('english', ${queryText})
-        )`;
 
         // Get matching chunks with document info
         const matchingChunks = await db
@@ -144,7 +141,6 @@ const actions = new Hono<{ Variables: Variables; Bindings: Env }>()
             orderInDocument: chunk.orderInDocument,
             metadata: chunk.metadata,
             similarity: vectorSimilarity,
-            textRank: textSearchRank,
             // Document fields
             docId: documents.id,
             docUuid: documents.uuid,
@@ -158,16 +154,10 @@ const actions = new Hono<{ Variables: Variables; Bindings: Env }>()
           .from(chunk)
           .innerJoin(documents, eq(chunk.documentId, documents.id))
           .where(
-            and(eq(documents.userId, user.id), sql`${vectorSimilarity} > 0.5`)
+            and(eq(documents.userId, user.id), sql`${vectorSimilarity} > 0.3`)
           )
-          .orderBy(
-            desc(sql<number>`(
-              0.6 * ${vectorSimilarity} + 
-              0.25 * ${textSearchRank} +
-              0.15 * (1.0 / (1.0 + extract(epoch from age(${documents.updatedAt})) / (90 * 24 * 60 * 60)))
-            )::float`)
-          )
-          .limit(15);
+          .orderBy(desc(vectorSimilarity))
+          .limit(25);
 
         // Get unique document IDs from matching chunks
         const uniqueDocIds = [
@@ -200,9 +190,9 @@ const actions = new Hono<{ Variables: Variables; Bindings: Env }>()
           const docChunks = chunksByDocument.get(match.documentId) || [];
           const matchIndex = docChunks.findIndex((c) => c.id === match.chunkId);
 
-          // Get surrounding chunks (1 before and 1 after)
-          const start = Math.max(0, matchIndex - 1);
-          const end = Math.min(docChunks.length, matchIndex + 2);
+          // Get surrounding chunks (2 before and 2 after for more context)
+          const start = Math.max(0, matchIndex - 2);
+          const end = Math.min(docChunks.length, matchIndex + 3);
           const relevantChunks = docChunks.slice(start, end);
 
           return {
@@ -223,34 +213,23 @@ const actions = new Hono<{ Variables: Variables; Bindings: Env }>()
           };
         });
 
-        // Remove duplicates based on document ID
-        const uniqueResults = contextualResults.reduce(
-          (acc, current) => {
-            const existingDoc = acc.find((doc) => doc.id === current.id);
-            if (!existingDoc) {
-              acc.push(current);
-            } else if (current.similarity > existingDoc.similarity) {
-              // Replace if current match is better
-              const index = acc.findIndex((doc) => doc.id === current.id);
-              acc[index] = current;
-            }
-            return acc;
-          },
-          [] as typeof contextualResults
-        );
+        // Sort by similarity and take top results
+        const topResults = contextualResults
+          .sort((a, b) => b.similarity - a.similarity)
+          .slice(0, 10);
 
-        data.appendMessageAnnotation(uniqueResults);
+        data.appendMessageAnnotation(topResults);
 
         if (lastUserMessage) {
           lastUserMessage.content =
             typeof lastUserMessage.content === "string"
               ? lastUserMessage.content +
-                `<context>${JSON.stringify(uniqueResults)}</context>`
+                `<context>${JSON.stringify(topResults)}</context>`
               : [
                   ...lastUserMessage.content,
                   {
                     type: "text",
-                    text: `<context>${JSON.stringify(uniqueResults)}</context>`,
+                    text: `<context>${JSON.stringify(topResults)}</context>`,
                   },
                 ];
           coreMessages[coreMessages.length - 1] = lastUserMessage;
@@ -309,7 +288,7 @@ const actions = new Hono<{ Variables: Variables; Bindings: Env }>()
                   role: "assistant",
                   content:
                     completion.text +
-                    `<context>[${JSON.stringify(uniqueResults)}]</context>`,
+                    `<context>[${JSON.stringify(topResults)}]</context>`,
                 },
               ];
 
@@ -601,14 +580,10 @@ const actions = new Hono<{ Variables: Variables; Bindings: Env }>()
           );
         }
 
-        // Pre-compute the vector similarity expression to avoid multiple calculations
+        // Pre-compute the vector similarity expression
         const vectorSimilarity = sql<number>`1 - (embeddings <=> ${JSON.stringify(embeddings.data[0])}::vector)`;
-        const textSearchRank = sql<number>`ts_rank_cd(
-          to_tsvector('english', coalesce(${chunk.textContent}, '')),
-          plainto_tsquery('english', ${query})
-        )`;
 
-        // First get the top matching chunks
+        // Get matching chunks
         const results = await db
           .select({
             chunkId: chunk.id,
@@ -617,7 +592,6 @@ const actions = new Hono<{ Variables: Variables; Bindings: Env }>()
             orderInDocument: chunk.orderInDocument,
             metadata: chunk.metadata,
             similarity: vectorSimilarity,
-            textRank: textSearchRank,
             // Document fields
             docUuid: documents.uuid,
             docContent: documents.content,
@@ -656,13 +630,7 @@ const actions = new Hono<{ Variables: Variables; Bindings: Env }>()
                 : [])
             )
           )
-          .orderBy(
-            desc(sql<number>`(
-              0.6 * ${vectorSimilarity} + 
-              0.25 * ${textSearchRank} +
-              0.15 * (1.0 / (1.0 + extract(epoch from age(${documents.updatedAt})) / (90 * 24 * 60 * 60)))
-            )::float`)
-          )
+          .orderBy(desc(vectorSimilarity))
           .limit(limit);
 
         // Group results by document and take the best matching chunk
@@ -678,26 +646,28 @@ const actions = new Hono<{ Variables: Variables; Bindings: Env }>()
         }
 
         // Convert back to array and format response
-        const finalResults = Array.from(documentResults.values()).map((r) => ({
-          id: r.documentId,
-          uuid: r.docUuid,
-          content: r.docContent,
-          type: r.docType,
-          url: r.docUrl,
-          title: r.docTitle,
-          createdAt: r.docCreatedAt,
-          updatedAt: r.docUpdatedAt,
-          userId: r.docUserId,
-          description: r.docDescription,
-          ogImage: r.docOgImage,
-          similarity: Number(r.similarity.toFixed(4)),
-          matchingChunk: {
-            id: r.chunkId,
-            content: r.textContent,
-            orderInDocument: r.orderInDocument,
-            metadata: r.metadata,
-          },
-        }));
+        const finalResults = Array.from(documentResults.values())
+          .sort((a, b) => b.similarity - a.similarity)
+          .map((r) => ({
+            id: r.documentId,
+            uuid: r.docUuid,
+            content: r.docContent,
+            type: r.docType,
+            url: r.docUrl,
+            title: r.docTitle,
+            createdAt: r.docCreatedAt,
+            updatedAt: r.docUpdatedAt,
+            userId: r.docUserId,
+            description: r.docDescription,
+            ogImage: r.docOgImage,
+            similarity: Number(r.similarity.toFixed(4)),
+            matchingChunk: {
+              id: r.chunkId,
+              content: r.textContent,
+              orderInDocument: r.orderInDocument,
+              metadata: r.metadata,
+            },
+          }));
 
         return c.json({ results: finalResults });
       } catch (error) {
@@ -722,6 +692,10 @@ const actions = new Hono<{ Variables: Variables; Bindings: Env }>()
       z.object({
         content: z.string().min(1, "Content cannot be empty"),
         spaces: z.array(z.string()).max(5).optional(),
+        id: z.string().optional(),
+        // any type of metadata. must be json serializable.
+        metadata: z.any().optional(),
+        images: z.array(z.string()).optional(),
         prefetched: z
           .object({
             contentToVectorize: z.string(),
@@ -736,16 +710,15 @@ const actions = new Hono<{ Variables: Variables; Bindings: Env }>()
     ),
     async (c) => {
       const body = c.req.valid("json");
-      console.log("body", body);
+
       const user = c.get("user");
 
       if (!user) {
         return c.json({ error: "You must be logged in to add content" }, 401);
       }
 
-      const type = body.prefetched
-        ? Ok(body.prefetched.type)
-        : typeDecider(body.content);
+      // Do not perform seperate check for prefetched type, breaks tweet addition from extension
+      const type = typeDecider(body.content);
 
       if (isErr(type)) {
         return c.json(
@@ -761,7 +734,7 @@ const actions = new Hono<{ Variables: Variables; Bindings: Env }>()
         body.content = `https://${body.content}`;
       }
 
-      const uuid = randomId();
+      const uuid = body.id ?? randomId();
       const contentId = `add-${user.id}-${uuid}`;
 
       const db = database(c.env.HYPERDRIVE.connectionString);
@@ -907,6 +880,7 @@ const actions = new Hono<{ Variables: Variables; Bindings: Env }>()
           contentHash: documentHash,
           raw:
             (body.prefetched ?? body.content) + "\n\n" + body.spaces?.join(" "),
+          metadata: body.metadata,
         });
 
         await c.env.CONTENT_WORKFLOW.create({
